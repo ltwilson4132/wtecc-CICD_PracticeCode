@@ -6,10 +6,11 @@ spec:
   workspaces:
     - name: pipeline-workspace
   params:
-    - name: build-image
     - name: repo-url
     - name: branch
       default: master
+    - name: build-image
+    - name: app-name
   tasks:
     - name: init
       workspaces:
@@ -56,12 +57,12 @@ spec:
       - name: args
         value: "-v --with-spec --spec-color"
       runAfter:
-        - lint
+        - clone
 
     - name: build
       workspaces:
         - name: source
-          workspace: pipeline-workspace          
+          workspace: pipeline-workspace
       taskRef:
         name: buildah
         kind: ClusterTask
@@ -70,12 +71,14 @@ spec:
         value: "$(params.build-image)"
       runAfter:
         - tests
+        - lint
 
     - name: deploy
       taskRef:
-        name: echo
+        name: openshift-client
+        kind: ClusterTask
       params:
-      - name: message
-        value: "Deploying $(params.branch) branch of $(params.repo-url) ..."
+      - name: SCRIPT
+        value: "oc create deploy $(params.app-name) --image=$(params.build-image)"
       runAfter:
         - build
